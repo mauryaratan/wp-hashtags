@@ -31,42 +31,62 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-function wph_filter_content($content, $id = null) {
-	if ( empty( $id ) ) {
-		$id = get_the_ID();
+
+final class WP_Hashtags {
+
+	public function __construct() {
+		add_filter( 'the_content', array( $this, 'wph_filter_content' ), 1000, 2 );
+		add_action( 'init', array( $this, 'wph_init' ) );
+		register_activation_hook( __FILE__, array( $this, 'wph_api_activation' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'wph_api_activation' ) );
 	}
-	
-	return preg_replace("/(#([_a-z0-9\-]+))/i", "<a href='". hashtag_url('/$2/') ."' title=\"Hashtag $1\">$1</a>", $content);
-}
-add_filter( 'the_content', 'wph_filter_content', 1000, 2 );
 
-/**
- * Register our rewrite rules for the API
- */
-function wph_init() {
-	add_rewrite_rule( '^hashtag/?$','index.php?hashtag=/','top' );
-	add_rewrite_rule( '^hashtag(.*)?','index.php?hashtag=$matches[1]','top' );
+	/**
+	 * Filter post content to display linked anchor tags.
+	 * 
+	 * @param  string 	$content Post content
+	 * @param  int 		$id Post ID.
+	 * @return string 	Filtered content containing hashtags
+	 */
+	public function wph_filter_content( $content, $id = null ) {
+		if ( empty( $id ) ) {
+			$id = get_the_ID();
+		}
+		
+		return preg_replace("/(#([_a-z0-9\-]+))/i", "<a href='". hashtag_url('/$2/') ."' title=\"Hashtag $1\">$1</a>", $content);
+	}
 
-	global $wp;
-	$wp->add_query_var('hashtag');
-}
-add_action( 'init', 'wph_init' );
+	/**
+	 * Register our rewrite rules for the API
+	 *
+	 * @return void
+	 */
+	public function wph_init() {
+		add_rewrite_rule( '^hashtag/?$','index.php?hashtag=/','top' );
+		add_rewrite_rule( '^hashtag(.*)?','index.php?hashtag=$matches[1]','top' );
 
-/**
- * Flush the rewrite rules on activation
- */
-function wph_api_activation() {
-	flush_rewrite_rules();
-}
-register_activation_hook( __FILE__, 'wph_api_activation' );
+		global $wp;
+		$wp->add_query_var('hashtag');
+	}
 
-/**
- * Also flush the rewrite rules on deactivation
- */
-function wph_api_deactivation() {
-	flush_rewrite_rules();
+	/**
+	 * Flush the rewrite rules on activation
+	 *
+	 * @return void
+	 */
+	public function wph_api_activation() {
+		flush_rewrite_rules();
+	}
+
+	/**
+	 * Also flush the rewrite rules on deactivation
+	 *
+	 * @return void
+	 */
+	public function wph_api_deactivation() {
+		flush_rewrite_rules();
+	}
 }
-register_deactivation_hook( __FILE__, 'wph_api_activation' );
 
 function get_hashtag_url( $blog_id = null, $path = '' ) {
 	$url = get_home_url( $blog_id, 'hashtag' );
@@ -80,3 +100,8 @@ function get_hashtag_url( $blog_id = null, $path = '' ) {
 function hashtag_url( $path = '' ) {
 	return get_hashtag_url( null, $path );
 }
+
+function wp_hashtags(){
+	return new WP_Hashtags();
+}
+wp_hashtags();
